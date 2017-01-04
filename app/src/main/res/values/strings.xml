@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Music Info</string>
+    <string name="artists">Artists</string>
+    <string name="albums">Albums</string>
+    <string name="musics">Musics</string>
+    <string name="search">Search</string>
+    <string name="search_artist">Search by artists name...</string>
+    <string name="search_album">Search by album name...</string>
+    <string name="search_music">Search by music name...</string>
+</resources>
