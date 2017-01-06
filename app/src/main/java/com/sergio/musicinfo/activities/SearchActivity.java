@@ -1,25 +1,58 @@
 package com.sergio.musicinfo.activities;
 
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.SearchManager;
-import android.app.SearchableInfo;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.view.MenuItemCompat;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.NotificationCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.sergio.musicinfo.R;
+import com.sergio.musicinfo.adapters.AlbumAdapter;
+import com.sergio.musicinfo.adapters.ArtistAdapter;
+import com.sergio.musicinfo.adapters.MusicAdapter;
+import com.sergio.musicinfo.adapters.RecyclerViewClick;
+import com.sergio.musicinfo.api.SpotifyService;
+import com.sergio.musicinfo.models.Album;
+import com.sergio.musicinfo.models.Artist;
+import com.sergio.musicinfo.models.Music;
+import com.sergio.musicinfo.models.search.AlbumSearch;
+import com.sergio.musicinfo.models.search.ArtistSearch;
+import com.sergio.musicinfo.models.search.MusicSearch;
+
+import java.util.List;
+import java.util.Random;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class SearchActivity extends AppCompatActivity {
+    private ViewGroup mRootView;
+    private ProgressBar mProgressBar;
     private String ACTION;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
+
+        mRootView = (ViewGroup) findViewById(R.id.activity_search);
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -33,9 +66,11 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+
         if (intent.getAction().equals(Intent.ACTION_SEARCH)) {
-            //TODO: Handle search
-            System.out.println(intent.getStringExtra(SearchManager.QUERY));
+            addProgressBar();
+            String query = intent.getStringExtra(SearchManager.QUERY);
+            handleSearchIntent(query);
         }
     }
 
@@ -57,21 +92,164 @@ public class SearchActivity extends AppCompatActivity {
             searchView.setQueryHint(getString(R.string.search_music));
         }
 
-        MenuItemCompat.setOnActionExpandListener(searchItem, new MenuItemCompat.OnActionExpandListener() {
-            @Override
-            public boolean onMenuItemActionExpand(MenuItem item) {
-                return true;
-            }
-
-            @Override
-            public boolean onMenuItemActionCollapse(MenuItem item) {
-                finish();
-                return true;
-            }
-        });
-
         searchView.onActionViewExpanded();
 
         return true;
+    }
+
+    private void addProgressBar() {
+        mRootView.removeAllViews();
+        if (mProgressBar == null) {
+            CoordinatorLayout.LayoutParams params = new CoordinatorLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.gravity = Gravity.CENTER;
+            mProgressBar = new ProgressBar(SearchActivity.this);
+            mProgressBar.setIndeterminate(true);
+            mProgressBar.setLayoutParams(params);
+            mRootView.addView(mProgressBar);
+        } else {
+            mRootView.addView(mProgressBar);
+        }
+    }
+
+    private void addEmptyTv() {
+        mRootView.removeAllViews();
+        CoordinatorLayout.LayoutParams params = new CoordinatorLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.gravity = Gravity.CENTER;
+        TextView emptyTv = new TextView(this);
+        emptyTv.setLayoutParams(params);
+        emptyTv.setText(R.string.no_results);
+        mRootView.addView(emptyTv);
+    }
+
+    private void addRecyclerView(List<?> contentList) {
+        RecyclerView.Adapter<?> adapter = null;
+
+        if (contentList.get(0) instanceof Music) {
+            adapter = new MusicAdapter((List<Music>) contentList);
+        } else if (contentList.get(0) instanceof Album) {
+            adapter = new AlbumAdapter((List<Album>) contentList);
+        } else if (contentList.get(0) instanceof Artist) {
+            adapter = new ArtistAdapter((List<Artist>) contentList);
+        }
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        CoordinatorLayout.LayoutParams params = new CoordinatorLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT);
+        params.gravity = Gravity.TOP;
+        RecyclerView recyclerView = new RecyclerView(this);
+        recyclerView.setLayoutParams(params);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setNestedScrollingEnabled(false);
+        recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.addOnItemTouchListener(new RecyclerViewClick(this, new RecyclerViewClick.ClickListener() {
+            @Override
+            public void onClick(View view, int position) {
+                //TODO: Handle click events
+                Toast.makeText(SearchActivity.this, "Soon", Toast.LENGTH_SHORT).show();
+                Random random = new Random();
+                int r = random.nextInt();
+                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                Notification notification = new NotificationCompat.Builder(SearchActivity.this).setSmallIcon(R.drawable.ic_launcher)
+                        .setContentTitle("RecyclerView Item Click")
+                        .setContentText("Position: " + position).build();
+                notificationManager.notify(r, notification);
+            }
+        }));
+        mRootView.removeAllViews();
+        mRootView.addView(recyclerView);
+    }
+
+    private void handleSearchIntent(String query) {
+        SpotifyService service = new SpotifyService.SpotifyBuilder().build();
+
+        if (ACTION.equals(MainActivity.ARTIST_ACTION)) {
+            Call<ArtistSearch> call = service.searchArtists(query);
+            Callback<ArtistSearch> callback = new Callback<ArtistSearch>() {
+                @Override
+                public void onResponse(Call<ArtistSearch> call, Response<ArtistSearch> response) {
+                    ArtistSearch artistSearch = response.body();
+
+                    if (artistSearch != null && response.isSuccessful()) {
+                        List<Artist> artistList = artistSearch.getSearchResult().getResultList();
+
+                        if (artistList.size() >= 1) {
+                            addRecyclerView(artistList);
+                        } else {
+                            addEmptyTv();
+                        }
+                    } else {
+                        Toast.makeText(SearchActivity.this, response.message(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ArtistSearch> call, Throwable t) {
+                    Toast.makeText(SearchActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            };
+
+            call.enqueue(callback);
+        } else if (ACTION.equals(MainActivity.ALBUM_ACTION)) {
+            Call<AlbumSearch> call = service.searchAlbums(query);
+            Callback<AlbumSearch> callback = new Callback<AlbumSearch>() {
+                @Override
+                public void onResponse(Call<AlbumSearch> call, Response<AlbumSearch> response) {
+                    AlbumSearch albumSearch = response.body();
+                    if (albumSearch != null && response.isSuccessful()) {
+                        List<Album> albumList = albumSearch.getSearchResult().getResultList();
+
+                        if (albumList.size() >= 1) {
+                            addRecyclerView(albumList);
+                        } else {
+                            addEmptyTv();
+                        }
+
+                    } else {
+                        Toast.makeText(SearchActivity.this, response.message(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<AlbumSearch> call, Throwable t) {
+                    Toast.makeText(SearchActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            };
+
+            call.enqueue(callback);
+        } else if (ACTION.equals(MainActivity.MUSIC_ACTION)) {
+            Call<MusicSearch> call = service.searchMusics(query);
+
+            Callback<MusicSearch> callback = new Callback<MusicSearch>() {
+                @Override
+                public void onResponse(Call<MusicSearch> call, Response<MusicSearch> response) {
+                    MusicSearch musicSearch = response.body();
+
+                    if (musicSearch != null && response.isSuccessful()) {
+                        List<Music> musicList = musicSearch.getSearchResult().getResultList();
+
+                        if (musicList.size() >= 1) {
+                            addRecyclerView(musicList);
+                        } else {
+                            addEmptyTv();
+                        }
+                    } else {
+                        Toast.makeText(SearchActivity.this, response.message(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<MusicSearch> call, Throwable t) {
+                    Toast.makeText(SearchActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            };
+
+            call.enqueue(callback);
+        }
     }
 }

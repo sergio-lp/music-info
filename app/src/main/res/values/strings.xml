@@ -4,7 +4,13 @@
     <string name="albums">Albums</string>
     <string name="musics">Musics</string>
     <string name="search">Search</string>
-    <string name="search_artist">Search by artists name...</string>
-    <string name="search_album">Search by album name...</string>
-    <string name="search_music">Search by music name...</string>
+    <string name="search_artist">Search by artists name…</string>
+    <string name="search_album">Search by album name…</string>
+    <string name="search_music">Search by music name…</string>
+    <string name="no_results">No results were found.</string>
+    <string name="separator">\u0020•\u0020</string>
+    <string name="album_art">Album art</string>
+    <string name="popularity">Popularity</string>
+    <string name="artist_picture">Artist picture</string>
+    <string name="followers">followers</string>
 </resources>
