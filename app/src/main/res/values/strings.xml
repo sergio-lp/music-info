@@ -13,4 +13,18 @@
     <string name="popularity">Popularity</string>
     <string name="artist_picture">Artist picture</string>
     <string name="followers">followers</string>
+    <string name="genres">Genres</string>
+    <string name="information">Information</string>
+    <string name="release_date">Release date:</string>
+    <string name="view_spotify">View on spotify</string>
+    <string name="not_found">Not found.</string>
+    <string name="explicit">Explicit</string>
+    <string name="no_album">No album</string>
+    <string name="album_by">Album by</string>
+    <string name="no_artist">No artist</string>
+    <string name="duration">Duration</string>
+    <string name="song_by">Song by</string>
+    <string name="album_musics">Other songs</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
 </resources>

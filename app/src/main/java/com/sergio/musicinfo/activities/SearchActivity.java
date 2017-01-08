@@ -1,22 +1,19 @@
 package com.sergio.musicinfo.activities;
 
-import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.app.NotificationCompat;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
-import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -26,7 +23,6 @@ import com.sergio.musicinfo.R;
 import com.sergio.musicinfo.adapters.AlbumAdapter;
 import com.sergio.musicinfo.adapters.ArtistAdapter;
 import com.sergio.musicinfo.adapters.MusicAdapter;
-import com.sergio.musicinfo.adapters.RecyclerViewClick;
 import com.sergio.musicinfo.api.SpotifyService;
 import com.sergio.musicinfo.models.Album;
 import com.sergio.musicinfo.models.Artist;
@@ -36,7 +32,6 @@ import com.sergio.musicinfo.models.search.ArtistSearch;
 import com.sergio.musicinfo.models.search.MusicSearch;
 
 import java.util.List;
-import java.util.Random;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -75,12 +70,22 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            finish();
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         MenuItem searchItem = menu.findItem(R.id.item_search);
 
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        SearchView searchView = (SearchView) searchItem.getActionView();
+        final SearchView searchView = (SearchView) searchItem.getActionView();
         searchView.setIconifiedByDefault(true);
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
 
@@ -93,7 +98,15 @@ public class SearchActivity extends AppCompatActivity {
         }
 
         searchView.onActionViewExpanded();
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                finish();
+        }
         return true;
     }
 
@@ -125,7 +138,7 @@ public class SearchActivity extends AppCompatActivity {
         mRootView.addView(emptyTv);
     }
 
-    private void addRecyclerView(List<?> contentList) {
+    private void addRecyclerView(final List<?> contentList) {
         RecyclerView.Adapter<?> adapter = null;
 
         if (contentList.get(0) instanceof Music) {
@@ -136,33 +149,28 @@ public class SearchActivity extends AppCompatActivity {
             adapter = new ArtistAdapter((List<Artist>) contentList);
         }
 
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         CoordinatorLayout.LayoutParams params = new CoordinatorLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
-        params.gravity = Gravity.TOP;
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         RecyclerView recyclerView = new RecyclerView(this);
-        recyclerView.setLayoutParams(params);
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setNestedScrollingEnabled(false);
-        recyclerView.setAdapter(adapter);
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.addOnItemTouchListener(new RecyclerViewClick(this, new RecyclerViewClick.ClickListener() {
-            @Override
-            public void onClick(View view, int position) {
-                //TODO: Handle click events
-                Toast.makeText(SearchActivity.this, "Soon", Toast.LENGTH_SHORT).show();
-                Random random = new Random();
-                int r = random.nextInt();
-                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                Notification notification = new NotificationCompat.Builder(SearchActivity.this).setSmallIcon(R.drawable.ic_launcher)
-                        .setContentTitle("RecyclerView Item Click")
-                        .setContentText("Position: " + position).build();
-                notificationManager.notify(r, notification);
+
+        if (!(contentList.get(0) instanceof Music)) {
+            if (contentList.size() > 1) {
+                DividerItemDecoration decoration = new DividerItemDecoration(this,
+                        layoutManager.getOrientation());
+                recyclerView.addItemDecoration(decoration);
             }
-        }));
+        }
+
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setAdapter(adapter);
+        recyclerView.setFocusable(false);
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setLayoutParams(params);
         mRootView.removeAllViews();
         mRootView.addView(recyclerView);
+
     }
 
     private void handleSearchIntent(String query) {
